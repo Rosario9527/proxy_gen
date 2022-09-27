@@ -13,7 +13,7 @@ const (
 )
 
 func init() {
-	log.SetPrefix("igniter-golib-log: ")
+	log.SetPrefix("proxy-gen: ")
 }
 
 // LogGoRoutineCount log goroutine count to logcat on android

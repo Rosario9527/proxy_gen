@@ -1,29 +1,21 @@
 package v2ray
 
 import (
-	"context"
-	"errors"
-	"fmt"
+	"bufio"
 	"io"
+	"io/ioutil"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
-	"proxy_gen/v2ray/VPN"
 	"strings"
 	"sync"
-	"time"
 
 	mobasset "golang.org/x/mobile/asset"
 
 	v2core "github.com/v2fly/v2ray-core/v4"
-	v2net "github.com/v2fly/v2ray-core/v4/common/net"
 	v2filesystem "github.com/v2fly/v2ray-core/v4/common/platform/filesystem"
-	v2stats "github.com/v2fly/v2ray-core/v4/features/stats"
 	v2serial "github.com/v2fly/v2ray-core/v4/infra/conf/serial"
 	_ "github.com/v2fly/v2ray-core/v4/main/distro/all"
-	v2internet "github.com/v2fly/v2ray-core/v4/transport/internet"
 
 	v2applog "github.com/v2fly/v2ray-core/v4/app/log"
 	v2commlog "github.com/v2fly/v2ray-core/v4/common/log"
@@ -33,165 +25,55 @@ const (
 	v2Asset = "v2ray.location.asset"
 )
 
-/*V2RayPoint V2Ray Point Server
-This is territory of Go, so no getter and setters!
-*/
-type V2RayPoint struct {
-	SupportSet   V2RayVPNServiceSupportsSet
-	statsManager v2stats.Manager
+var pointInstance = &v2RayPoint{}
 
-	dialer    *VPN.ProtectedDialer
-	v2rayOP   sync.Mutex
-	closeChan chan struct{}
+type v2RayPoint struct {
+	v2rayOP sync.Mutex
 
-	Vpoint    *v2core.Instance
-	IsRunning bool
-
-	DomainName           string
-	ConfigureFileContent string
-	AsyncResolve         bool
+	v2coreInstance *v2core.Instance
 }
 
-/*V2RayVPNServiceSupportsSet To support Android VPN mode*/
-type V2RayVPNServiceSupportsSet interface {
-	Setup(Conf string) int
-	Prepare() int
-	Shutdown() int
-	Protect(int) bool
-	OnEmitStatus(int, string) int
+func (v *v2RayPoint) zero() {
+	v.v2coreInstance = nil
 }
 
-/*RunLoop Run V2Ray main loop
- */
-func (v *V2RayPoint) RunLoop(prefIPv6 bool) (err error) {
-	v.v2rayOP.Lock()
-	defer v.v2rayOP.Unlock()
-	//Construct Context
-
-	if !v.IsRunning {
-		v.closeChan = make(chan struct{})
-		v.dialer.PrepareResolveChan()
-		go func() {
-			select {
-			// wait until resolved
-			case <-v.dialer.ResolveChan():
-				// shutdown VPNService if server name can not reolved
-				if !v.dialer.IsVServerReady() {
-					log.Println("vServer cannot resolved, shutdown")
-					v.StopLoop()
-					v.SupportSet.Shutdown()
-				}
-
-			// stop waiting if manually closed
-			case <-v.closeChan:
-			}
-		}()
-
-		if v.AsyncResolve {
-			go v.dialer.PrepareDomain(v.DomainName, v.closeChan, prefIPv6)
-		} else {
-			v.dialer.PrepareDomain(v.DomainName, v.closeChan, prefIPv6)
-		}
-
-		err = v.pointloop()
-	}
-	return
-}
-
-/*StopLoop Stop V2Ray main loop
- */
-func (v *V2RayPoint) StopLoop() (err error) {
-	v.v2rayOP.Lock()
-	defer v.v2rayOP.Unlock()
-	if v.IsRunning {
-		close(v.closeChan)
-		v.shutdownInit()
-		v.SupportSet.OnEmitStatus(0, "Closed")
-	}
-	return
-}
-
-//Delegate Funcation
-func (v *V2RayPoint) QueryStats(tag string, direct string) int64 {
-	if v.statsManager == nil {
-		return 0
-	}
-	counter := v.statsManager.GetCounter(fmt.Sprintf("outbound>>>%s>>>traffic>>>%s", tag, direct))
-	if counter == nil {
-		return 0
-	}
-	return counter.Set(0)
-}
-
-func (v *V2RayPoint) shutdownInit() {
-	v.IsRunning = false
-	v.Vpoint.Close()
-	v.Vpoint = nil
-	v.statsManager = nil
-}
-
-func (v *V2RayPoint) pointloop() error {
-	log.Println("loading v2ray config")
-	config, err := v2serial.LoadJSONConfig(strings.NewReader(v.ConfigureFileContent))
+func (v *v2RayPoint) start(filename string) {
+	file, err := os.Open(filename)
 	if err != nil {
-		log.Println(err)
-		return err
+		log.Fatalf("v2ray start open config err:%s", err.Error())
+		return
 	}
-
-	log.Println("new v2ray core")
-	v.Vpoint, err = v2core.New(config)
+	defer file.Close()
+	config, err := v2serial.LoadJSONConfig(bufio.NewReader(file))
 	if err != nil {
-		v.Vpoint = nil
-		log.Println(err)
-		return err
+		log.Fatalf("v2ray load config err:%s", err.Error())
+		return
 	}
-	v.statsManager = v.Vpoint.GetFeature(v2stats.ManagerType()).(v2stats.Manager)
+	log.Println("XX v2ray start config", config)
+
+	instance, err := v2core.New(config)
+	if err != nil {
+		v.v2coreInstance = nil
+		log.Fatalf("create v2ray core err:%s", err.Error())
+		return
+	}
 
 	log.Println("start v2ray core")
-	v.IsRunning = true
-	if err := v.Vpoint.Start(); err != nil {
-		v.IsRunning = false
-		log.Println(err)
-		return err
+	if err := instance.Start(); err != nil {
+		log.Fatalf("start v2ray core err:%s", err.Error())
+		return
 	}
-
-	v.SupportSet.Prepare()
-	v.SupportSet.Setup("")
-	v.SupportSet.OnEmitStatus(0, "Running")
-	return nil
+	v.v2coreInstance = instance
+	return
 }
 
-func (v *V2RayPoint) MeasureDelay() (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-
-	go func() {
-		select {
-		case <-v.closeChan:
-			// cancel request if close called during meansure
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-
-	return measureInstDelay(ctx, v.Vpoint)
-}
-
-// InitV2Env set v2 asset path
-func InitV2Env(envPath string) {
-	//Initialize asset API, Since Raymond Will not let notify the asset location inside Process,
-	//We need to set location outside V2Ray
-	if len(envPath) > 0 {
-		os.Setenv(v2Asset, envPath)
+func (v *v2RayPoint) stop() {
+	defer v.zero()
+	if v.v2coreInstance != nil {
+		err := v.v2coreInstance.Close()
+		log.Printf("v2ray stop err:%v\n", err)
 	}
-
-	//Now we handle read, fallback to gomobile asset (apk assets)
-	v2filesystem.NewFileReader = func(path string) (io.ReadCloser, error) {
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			_, file := filepath.Split(path)
-			return mobasset.Open(file)
-		}
-		return os.Open(path)
-	}
+	return
 }
 
 //Delegate Funcation
@@ -200,89 +82,42 @@ func TestConfig(ConfigureFileContent string) error {
 	return err
 }
 
-func MeasureOutboundDelay(ConfigureFileContent string) (int64, error) {
-	config, err := v2serial.LoadJSONConfig(strings.NewReader(ConfigureFileContent))
-	if err != nil {
-		return -1, err
+func Start(assetPath string, configPath string) {
+	pointInstance.v2rayOP.Lock()
+	defer pointInstance.v2rayOP.Unlock()
+	if pointInstance.v2coreInstance != nil {
+		log.Println("v2ray is running, to re-run, Stop first")
+		return
 	}
 
-	// dont listen to anything for test purpose
-	config.Inbound = nil
-	config.Transport = nil
-	// keep only basic features
-	config.App = config.App[:4]
-
-	inst, err := v2core.New(config)
-	if err != nil {
-		return -1, err
+	if len(assetPath) > 0 {
+		os.Setenv(v2Asset, assetPath)
+	}
+	//Now we handle read, fallback to gomobile asset (apk assets)
+	v2filesystem.NewFileReader = func(path string) (io.ReadCloser, error) {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			_, file := filepath.Split(path)
+			return mobasset.Open(file)
+		}
+		return os.Open(path)
 	}
 
-	inst.Start()
-	delay, err := measureInstDelay(context.Background(), inst)
-	inst.Close()
-	return delay, err
-}
-
-/*NewV2RayPoint new V2RayPoint*/
-func NewV2RayPoint(s V2RayVPNServiceSupportsSet, adns bool) *V2RayPoint {
-	// inject our own log writer
 	v2applog.RegisterHandlerCreator(v2applog.LogType_Console,
 		func(lt v2applog.LogType,
 			options v2applog.HandlerCreatorOptions) (v2commlog.Handler, error) {
 			return v2commlog.NewLogger(createStdoutLogWriter()), nil
 		})
-
-	dialer := VPN.NewPreotectedDialer(s)
-	v2internet.UseAlternativeSystemDialer(dialer)
-	return &V2RayPoint{
-		SupportSet:   s,
-		dialer:       dialer,
-		AsyncResolve: adns,
-	}
-}
-
-func CheckVersion() int {
-	return 23
-}
-
-/*CheckVersionX string
-This func will return libv2ray binding version and V2Ray version used.
-*/
-func CheckVersionX() string {
-	return fmt.Sprintf("Lib v%d, V2fly-core v%s", CheckVersion(), v2core.Version())
-}
-
-func measureInstDelay(ctx context.Context, inst *v2core.Instance) (int64, error) {
-	if inst == nil {
-		return -1, errors.New("core instance nil")
-	}
-
-	tr := &http.Transport{
-		TLSHandshakeTimeout: 6 * time.Second,
-		DisableKeepAlives:   true,
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			dest, err := v2net.ParseDestination(fmt.Sprintf("%s:%s", network, addr))
-			if err != nil {
-				return nil, err
-			}
-			return v2core.Dial(ctx, inst, dest)
-		},
-	}
-
-	c := &http.Client{
-		Transport: tr,
-		Timeout:   12 * time.Second,
-	}
-
-	req, _ := http.NewRequestWithContext(ctx, "GET", "http://www.google.com/generate_204", nil)
-	start := time.Now()
-	resp, err := c.Do(req)
+	config, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return -1, err
+		log.Println("v2ray read file err", err)
 	}
-	if resp.StatusCode != http.StatusNoContent {
-		return -1, fmt.Errorf("status != 204: %s", resp.Status)
-	}
-	resp.Body.Close()
-	return time.Since(start).Milliseconds(), nil
+	log.Println("v2ray asset:", string(assetPath))
+	log.Println("v2ray config:", string(config))
+	pointInstance.start(configPath)
+}
+
+func Stop() {
+	pointInstance.v2rayOP.Lock()
+	defer pointInstance.v2rayOP.Unlock()
+	pointInstance.stop()
 }

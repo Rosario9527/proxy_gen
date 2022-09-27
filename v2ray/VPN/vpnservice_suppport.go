@@ -69,11 +69,10 @@ func (r *resolved) currentIP() net.IP {
 }
 
 // NewPreotectedDialer ...
-func NewPreotectedDialer(p protectSet) *ProtectedDialer {
+func NewPreotectedDialer() *ProtectedDialer {
 	d := &ProtectedDialer{
 		// prefer native lookup on Android
-		resolver:   &net.Resolver{PreferGo: false},
-		protectSet: p,
+		resolver: &net.Resolver{PreferGo: false},
 	}
 	return d
 }
@@ -81,29 +80,18 @@ func NewPreotectedDialer(p protectSet) *ProtectedDialer {
 // ProtectedDialer ...
 type ProtectedDialer struct {
 	currentServer string
-	resolveChan   chan struct{}
 	preferIPv6    bool
 
 	vServer  *resolved
 	resolver *net.Resolver
-
-	protectSet
 }
 
 func (d *ProtectedDialer) IsVServerReady() bool {
 	return (d.vServer != nil)
 }
 
-func (d *ProtectedDialer) PrepareResolveChan() {
-	d.resolveChan = make(chan struct{})
-}
-
-func (d *ProtectedDialer) ResolveChan() <-chan struct{} {
-	return d.resolveChan
-}
-
 // simplicated version of golang: internetAddrList in src/net/ipsock.go
-func (d *ProtectedDialer) lookupAddr(addr string) (*resolved, error) {
+func (d *ProtectedDialer) lookupAddr(ctx context.Context, addr string) (*resolved, error) {
 
 	var (
 		err        error
@@ -111,7 +99,7 @@ func (d *ProtectedDialer) lookupAddr(addr string) (*resolved, error) {
 		portnum    int
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 	defer cancel()
 
 	if host, port, err = net.SplitHostPort(addr); err != nil {
@@ -155,39 +143,6 @@ func (d *ProtectedDialer) lookupAddr(addr string) (*resolved, error) {
 	return rs, nil
 }
 
-// PrepareDomain caches direct v2ray server host
-func (d *ProtectedDialer) PrepareDomain(domainName string, closeCh <-chan struct{}, prefIPv6 bool) {
-	log.Printf("Preparing Domain: %s", domainName)
-	d.currentServer = domainName
-	d.preferIPv6 = prefIPv6
-
-	defer close(d.resolveChan)
-	maxRetry := 10
-	for {
-		if maxRetry == 0 {
-			log.Println("PrepareDomain maxRetry reached. exiting.")
-			return
-		}
-
-		resolved, err := d.lookupAddr(domainName)
-		if err != nil {
-			maxRetry--
-			log.Printf("PrepareDomain err: %v\n", err)
-			select {
-			case <-closeCh:
-				log.Printf("PrepareDomain exit due to v2ray closed")
-				return
-			case <-time.After(time.Second * 2):
-			}
-			continue
-		}
-
-		d.vServer = resolved
-		log.Printf("Prepare Result:\n Domain: %s\n Port: %d\n IPs: %v\n",
-			resolved.domain, resolved.Port, resolved.IPs)
-		return
-	}
-}
 
 func (d *ProtectedDialer) getFd(network v2net.Network) (fd int, err error) {
 	switch network {
@@ -212,17 +167,6 @@ func (d *ProtectedDialer) Dial(ctx context.Context,
 	// try to connect fixed IP if multiple IP parsed from domain,
 	// and switch to next IP if error occurred
 	if Address == d.currentServer {
-		if d.vServer == nil {
-			log.Println("Dial pending prepare  ...", Address)
-			<-d.resolveChan
-
-			// user may close connection during PrepareDomain,
-			// fast return release resources.
-			if d.vServer == nil {
-				return nil, fmt.Errorf("fail to prepare domain %s", d.currentServer)
-			}
-		}
-
 		fd, err := d.getFd(dest.Network)
 		if err != nil {
 			return nil, err
@@ -240,7 +184,7 @@ func (d *ProtectedDialer) Dial(ctx context.Context,
 
 	// v2ray connecting to "domestic" servers, no caching results
 	log.Printf("Not Using Prepared: %s,%s", network, Address)
-	resolved, err := d.lookupAddr(Address)
+	resolved, err := d.lookupAddr(ctx, Address)
 	if err != nil {
 		return nil, err
 	}
@@ -258,12 +202,6 @@ func (d *ProtectedDialer) Dial(ctx context.Context,
 func (d *ProtectedDialer) fdConn(ctx context.Context, ip net.IP, port int, fd int) (net.Conn, error) {
 
 	defer unix.Close(fd)
-
-	// call android VPN service to "protect" the fd connecting straight out
-	if !d.Protect(fd) {
-		log.Printf("fdConn fail to protect, Close Fd: %d", fd)
-		return nil, errors.New("fail to protect")
-	}
 
 	sa := &unix.SockaddrInet6{
 		Port: port,
