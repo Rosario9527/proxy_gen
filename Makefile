@@ -1,10 +1,10 @@
 BUILDDIR=$(shell pwd)/build
 IMPORT_PATH= \
-	proxy_gen/clash \
-	proxy_gen/tun2socks \
 	proxy_gen/freeport \
+	proxy_gen/trojango \
 	proxy_gen/util \
-	proxy_gen/v2ray
+	proxy_gen/v2ray \
+	proxy_gen/xtun2socks
 
 all: ios android
 
@@ -15,7 +15,7 @@ ios: clean
 
 android: clean
 	mkdir -p $(BUILDDIR)
-	env GO111MODULE="on" gomobile bind -o $(BUILDDIR)/golibs.aar -a -v -x -androidapi 23 -ldflags '-w -s' -target=android $(IMPORT_PATH)
+	env GO111MODULE="on" gomobile bind -o $(BUILDDIR)/golibs.aar -a -v -x -androidapi 23 -tags "full" -trimpath -ldflags '-w -s' -target=android $(IMPORT_PATH)
 
 clean:
 	gomobile clean
