@@ -11,5 +11,5 @@ func main() {
 	freeport.GetFreePort()
 	trojango.Start("{}")
 	v2ray.Start("", "")
-	xtun2socks.Start("")
+	xtun2socks.Start(nil)
 }

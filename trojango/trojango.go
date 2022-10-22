@@ -10,15 +10,20 @@ var (
 )
 
 func Start(jsonCfg string) {
-	var err error
-	proxy_, err = proxy.NewProxyFromConfigData([]byte(jsonCfg), true)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = proxy_.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
+	ch := make(chan struct{})
+	go func() {
+		close(ch)
+		var err error
+		proxy_, err = proxy.NewProxyFromConfigData([]byte(jsonCfg), true)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = proxy_.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+	<-ch
 }
 
 func Stop() {

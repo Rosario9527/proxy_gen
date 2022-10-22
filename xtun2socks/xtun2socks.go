@@ -3,22 +3,20 @@ package xtun2socks
 import (
 	_ "github.com/xjasonlyu/tun2socks/v2/dns"
 	"github.com/xjasonlyu/tun2socks/v2/engine"
-	"github.com/xjasonlyu/tun2socks/v2/log"
 	"go.uber.org/automaxprocs/maxprocs"
-	"gopkg.in/yaml.v3"
 )
 
-var (
-	key = new(engine.Key)
-)
+type Options = engine.Key
 
-func Start(cfg string) {
-	maxprocs.Set(maxprocs.Logger(func(s string, i ...interface{}) {}))
-	if err := yaml.Unmarshal([]byte(cfg), key); err != nil {
-		log.Fatalf("Failed to unmarshal config %v", err)
-	}
-	engine.Insert(key)
-	engine.Start()
+func Start(opt *Options) {
+	ch := make(chan struct{})
+	go func() {
+		close(ch)
+		maxprocs.Set(maxprocs.Logger(func(s string, i ...interface{}) {}))
+		engine.Insert(opt)
+		engine.Start()
+	}()
+	<-ch
 }
 
 func Stop() {

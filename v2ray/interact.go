@@ -1,9 +1,7 @@
 package v2ray
 
 import (
-	"bufio"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -37,14 +35,8 @@ func (v *v2RayPoint) zero() {
 	v.v2coreInstance = nil
 }
 
-func (v *v2RayPoint) start(filename string) {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("v2ray start open config err:%s", err.Error())
-		return
-	}
-	defer file.Close()
-	config, err := v2serial.LoadJSONConfig(bufio.NewReader(file))
+func (v *v2RayPoint) start(cfgStr string) {
+	config, err := v2serial.LoadJSONConfig(strings.NewReader(cfgStr))
 	if err != nil {
 		log.Fatalf("v2ray load config err:%s", err.Error())
 		return
@@ -82,7 +74,7 @@ func TestConfig(ConfigureFileContent string) error {
 	return err
 }
 
-func Start(assetPath string, configPath string) {
+func Start(assetPath string, cfgStr string) {
 	pointInstance.v2rayOP.Lock()
 	defer pointInstance.v2rayOP.Unlock()
 	if pointInstance.v2coreInstance != nil {
@@ -107,13 +99,8 @@ func Start(assetPath string, configPath string) {
 			options v2applog.HandlerCreatorOptions) (v2commlog.Handler, error) {
 			return v2commlog.NewLogger(createStdoutLogWriter()), nil
 		})
-	config, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		log.Println("v2ray read file err", err)
-	}
-	log.Println("v2ray asset:", string(assetPath))
-	log.Println("v2ray config:", string(config))
-	pointInstance.start(configPath)
+
+	pointInstance.start(cfgStr)
 }
 
 func Stop() {
