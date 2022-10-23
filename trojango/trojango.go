@@ -2,7 +2,10 @@ package trojango
 
 import (
 	"github.com/p4gefau1t/trojan-go/log"
+	_ "github.com/p4gefau1t/trojan-go/log/simplelog"
 	"github.com/p4gefau1t/trojan-go/proxy"
+	_ "github.com/p4gefau1t/trojan-go/proxy/client"
+	_ "github.com/p4gefau1t/trojan-go/version"
 )
 
 var (

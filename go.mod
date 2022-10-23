@@ -19,6 +19,7 @@ require (
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/boljen/go-bitmap v0.0.0-20151001105940-23cd2fb0ce7d // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
+	github.com/cloudquery/sqlite v1.0.1 // indirect
 	github.com/dgryski/go-metro v0.0.0-20200812162917-85c65e2d0165 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/ebfe/bcrypt_pbkdf v0.0.0-20140212075826-3c8d2dcb253a // indirect
@@ -29,12 +30,15 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.0 // indirect
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jhump/protoreflect v1.12.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/klauspost/cpuid v1.2.3 // indirect
 	github.com/klauspost/reedsolomon v1.9.3 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -44,6 +48,7 @@ require (
 	github.com/marten-seemann/qtls-go1-17 v0.1.2 // indirect
 	github.com/marten-seemann/qtls-go1-18 v0.1.2 // indirect
 	github.com/marten-seemann/qtls-go1-19 v0.1.0-beta.1 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mustafaturan/bus v1.0.2 // indirect
 	github.com/mustafaturan/monoton v1.0.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
@@ -55,13 +60,20 @@ require (
 	github.com/pion/sctp v1.7.6 // indirect
 	github.com/pires/go-proxyproto v0.6.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/refraction-networking/utls v0.0.0-20210713165636-0b2885c8c0d4 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/secure-io/siv-go v0.0.0-20180922214919-5ff40651e2c4 // indirect
 	github.com/seiflotfy/cuckoofilter v0.0.0-20220312154859-af7fbb8e765b // indirect
+	github.com/shadowsocks/go-shadowsocks2 v0.1.5 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/txthinking/runnergroup v0.0.0-20210608031112-152c7c4432bf // indirect
+	github.com/txthinking/socks5 v0.0.0-20210716140126-fa1f52a8f2da // indirect
+	github.com/txthinking/x v0.0.0-20210326105829-476fab902fbe // indirect
 	github.com/v2fly/BrowserBridge v0.0.0-20210430233438-0570fc1d7d08 // indirect
 	github.com/v2fly/VSign v0.0.0-20201108000810-e2adc24bf848 // indirect
 	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e // indirect
+	github.com/v2fly/v2ray-core/v4 v4.42.1 // indirect
 	github.com/xiaokangwang/VLite v0.0.0-20220418190619-cff95160a432 // indirect
 	github.com/xtaci/smux v1.5.15 // indirect
 	go.starlark.net v0.0.0-20220302181546-5411bad688d1 // indirect
@@ -83,6 +95,11 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/gorm v1.21.10 // indirect
 	gvisor.dev/gvisor v0.0.0-20220405222207-795f4f0139bb // indirect
 	inet.af/netaddr v0.0.0-20211027220019-c74959edd3b6 // indirect
+	modernc.org/libc v1.7.12 // indirect
+	modernc.org/mathutil v1.2.2 // indirect
+	modernc.org/memory v1.0.4 // indirect
+	modernc.org/sqlite v1.8.8 // indirect
 )
