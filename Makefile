@@ -1,7 +1,6 @@
 BUILDDIR=$(shell pwd)/build
 IMPORT_PATH= \
 	proxy_gen/freeport \
-	proxy_gen/trojango \
 	proxy_gen/util \
 	proxy_gen/v2ray \
 	proxy_gen/xtun2socks

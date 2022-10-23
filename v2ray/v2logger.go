@@ -26,6 +26,6 @@ func (w *consoleLogWriter) Close() error {
 func createStdoutLogWriter() v2commlog.WriterCreator {
 	return func() v2commlog.Writer {
 		return &consoleLogWriter{
-			logger: log.New(os.Stdout, "", 0)}
+			logger: log.New(os.Stdout, "PROXY_GEN:", 0)}
 	}
 }

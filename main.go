@@ -1,7 +1,7 @@
 package main
 
 import (
-	"proxy_gen/trojango"
+	"proxy_gen/v2ray"
 	"time"
 )
 
@@ -10,7 +10,8 @@ var troanCfg = `
 `
 
 func main() {
-	trojango.Start(troanCfg)
+	// trojango.Start(troanCfg)
+	v2ray.Start("", "{}")
 
 	time.Sleep(time.Second * 190000)
 }
