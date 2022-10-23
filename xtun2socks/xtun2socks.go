@@ -1,7 +1,7 @@
 package xtun2socks
 
 import (
-	_ "github.com/xjasonlyu/tun2socks/v2/dns"
+	// _ "github.com/xjasonlyu/tun2socks/v2/dns" // 引入这一句，会导致v2ray，解析失败
 	"github.com/xjasonlyu/tun2socks/v2/engine"
 	"go.uber.org/automaxprocs/maxprocs"
 )
