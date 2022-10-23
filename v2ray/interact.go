@@ -5,18 +5,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
 	mobasset "golang.org/x/mobile/asset"
 
-	v2core "github.com/v2fly/v2ray-core/v4"
-	v2filesystem "github.com/v2fly/v2ray-core/v4/common/platform/filesystem"
-	v2serial "github.com/v2fly/v2ray-core/v4/infra/conf/serial"
-	_ "github.com/v2fly/v2ray-core/v4/main/distro/all"
+	v2core "github.com/v2fly/v2ray-core/v5"
+	v2filesystem "github.com/v2fly/v2ray-core/v5/common/platform/filesystem"
+	v2serial "github.com/v2fly/v2ray-core/v5/infra/conf/serial"
+	_ "github.com/v2fly/v2ray-core/v5/main/distro/all"
 
-	v2applog "github.com/v2fly/v2ray-core/v4/app/log"
-	v2commlog "github.com/v2fly/v2ray-core/v4/common/log"
+	v2applog "github.com/v2fly/v2ray-core/v5/app/log"
+	v2commlog "github.com/v2fly/v2ray-core/v5/common/log"
 )
 
 const (
@@ -55,6 +56,7 @@ func (v *v2RayPoint) start(cfgStr string) {
 		log.Fatalf("start v2ray core err:%s", err.Error())
 		return
 	}
+	runtime.GC()
 	v.v2coreInstance = instance
 	return
 }
@@ -68,7 +70,7 @@ func (v *v2RayPoint) stop() {
 	return
 }
 
-//Delegate Funcation
+// Delegate Funcation
 func TestConfig(ConfigureFileContent string) error {
 	_, err := v2serial.LoadJSONConfig(strings.NewReader(ConfigureFileContent))
 	return err
